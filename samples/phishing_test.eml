@@ -1,0 +1,31 @@
+From: "PayPal Security" <security@paypa1-verify.com>
+To: victim@example.com
+Subject: Urgent: Your account has been suspended
+Date: Mon, 10 Apr 2026 08:23:11 +0000
+MIME-Version: 1.0
+Content-Type: multipart/mixed; boundary="boundary123"
+Reply-To: phisher@evil-domain.ru
+Received: from mail.paypa1-verify.com (mail.paypa1-verify.com [192.168.1.1])
+
+--boundary123
+Content-Type: text/plain; charset="utf-8"
+
+Dear Customer,
+
+Your PayPal account has been suspended due to suspicious activity.
+Please verify your account immediately to avoid permanent suspension.
+
+Click here to verify: http://paypal-secure-login.evil.com/verify?token=abc123
+Backup link: http://bit.ly/3xR9mNp
+
+Failure to verify within 24 hours will result in account termination.
+
+PayPal Security Team
+
+--boundary123
+Content-Type: application/octet-stream; name="invoice.pdf.exe"
+Content-Disposition: attachment; filename="invoice.pdf.exe"
+
+TVqQAAMAAAAEAAAA
+
+--boundary123--
