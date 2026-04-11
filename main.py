@@ -12,24 +12,20 @@ from analyzer.analyzers.content_analyzer import analyze_content
 from analyzer.reporters import terminal_reporter, json_reporter
 
 
-def run_analysis(eml_path: str) -> ScanResult:
+def run_analysis(eml_path: str, vt_api_key: str | None = None) -> ScanResult:
     """Parse the .eml file and run all analyzers."""
 
-    # Step 1 — Parse raw .eml into structured EmailMessage
     with open(eml_path, "r", encoding="utf-8", errors="replace") as f:
         raw = f.read()
 
     email = parse_email(raw)
 
-
-    # Step 2 — Run all analyzers, collect indicators
     indicators = []
     indicators += analyze_headers(email)
-    indicators += analyze_urls(email)
-    indicators += analyze_attachments(email)
+    indicators += analyze_urls(email, api_key=vt_api_key)
+    indicators += analyze_attachments(email, api_key=vt_api_key)
     indicators += analyze_content(email)
 
-    # Step 3 — Build ScanResult and score it
     result = ScanResult(email=email, indicators=indicators)
     result = score_result(result)
 
@@ -56,12 +52,20 @@ def main():
         help="Save JSON report to a file (only with --format json)",
         default=None
     )
+    parser.add_argument(
+        "--virustotal",
+        help="VirusTotal API key to enable URL and file hash lookups",
+        default=None,
+        metavar="API_KEY"
+    )
 
     args = parser.parse_args()
 
-    # Validate file
+    if args.virustotal:
+        print("[+] VirusTotal integration enabled")
+
     try:
-        result = run_analysis(args.eml_file)
+        result = run_analysis(args.eml_file, vt_api_key=args.virustotal)
     except FileNotFoundError:
         print(f"[ERROR] File not found: {args.eml_file}")
         sys.exit(1)
@@ -69,7 +73,6 @@ def main():
         print(f"[ERROR] Failed to analyze file: {e}")
         sys.exit(1)
 
-    # Output
     if args.format == "json":
         output = json_reporter.render(result)
         print(output)

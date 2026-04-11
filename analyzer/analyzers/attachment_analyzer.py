@@ -1,5 +1,8 @@
+# analyzer/analyzers/attachment_analyzer.py
+
 import os
 from analyzer.core.models import EmailMessage, ThreatIndicator
+from analyzer.core import virustotal
 
 DANGEROUS_EXTENSIONS = {
     ".exe", ".bat", ".cmd", ".ps1", ".vbs", ".js", ".jar",
@@ -9,7 +12,6 @@ DANGEROUS_EXTENSIONS = {
 
 ARCHIVE_EXTENSIONS = {".zip", ".rar", ".7z", ".tar", ".gz", ".iso"}
 
-# Map of extension -> expected content type fragment
 EXTENSION_CONTENT_TYPE_MAP = {
     ".pdf": "pdf",
     ".jpg": "jpeg",
@@ -23,20 +25,16 @@ EXTENSION_CONTENT_TYPE_MAP = {
 
 
 def get_extensions(filename: str) -> list[str]:
-    """
-    Return all extensions from a filename.
-    'invoice.pdf.exe' -> ['.pdf', '.exe']
-    """
     parts = filename.lower().split(".")
     if len(parts) <= 1:
         return []
     return ["." + p for p in parts[1:]]
 
 
-def analyze_attachments(email: EmailMessage) -> list[ThreatIndicator]:
+def analyze_attachments(email: EmailMessage, api_key: str | None = None) -> list[ThreatIndicator]:
     """
     Analyze email attachments for suspicious indicators.
-    Returns a list of ThreatIndicator objects.
+    Pass api_key to enable VirusTotal hash lookups.
     """
     indicators = []
 
@@ -44,12 +42,13 @@ def analyze_attachments(email: EmailMessage) -> list[ThreatIndicator]:
         filename = attachment.get("filename", "unknown").lower()
         content_type = attachment.get("content_type", "").lower()
         size = attachment.get("size", 0)
+        data: bytes = attachment.get("data") or b""
         extensions = get_extensions(filename)
 
         if not extensions:
             continue
 
-        final_ext = extensions[-1]  # The true extension
+        final_ext = extensions[-1]
 
         # --- Check 1: Dangerous extension ---
         if final_ext in DANGEROUS_EXTENSIONS:
@@ -87,9 +86,15 @@ def analyze_attachments(email: EmailMessage) -> list[ThreatIndicator]:
             indicators.append(ThreatIndicator(
                 category="attachment",
                 name="suspicious_archive",
-                description=f"Attachment is a compressed archive which may conceal malicious files",
+                description="Attachment is a compressed archive which may conceal malicious files",
                 severity=4,
                 evidence=filename,
             ))
+
+        # --- Check 5: VirusTotal hash lookup (optional) ---
+        if api_key and data:
+            vt_indicator = virustotal.check_file_hash(data, filename, api_key)
+            if vt_indicator:
+                indicators.append(vt_indicator)
 
     return indicators

@@ -1,6 +1,9 @@
+# analyzer/analyzers/url_analyzer.py
+
 import re
 from urllib.parse import urlparse
 from analyzer.core.models import EmailMessage, ThreatIndicator
+from analyzer.core import virustotal
 
 SUSPICIOUS_TLDS = {
     ".xyz", ".top", ".click", ".tk", ".ml", ".ga", ".cf",
@@ -19,7 +22,6 @@ KNOWN_BRANDS = [
 
 
 def extract_domain(url: str) -> str:
-    """Extract the netloc (domain + subdomains) from a URL."""
     try:
         return urlparse(url).netloc.lower()
     except Exception:
@@ -27,20 +29,16 @@ def extract_domain(url: str) -> str:
 
 
 def get_root_domain(netloc: str) -> str:
-    """
-    Extract the root domain from a netloc string.
-    e.g. 'paypal.com.evil.com' -> 'evil.com'
-    """
     parts = netloc.split(".")
     if len(parts) >= 2:
         return ".".join(parts[-2:])
     return netloc
 
 
-def analyze_urls(email: EmailMessage) -> list[ThreatIndicator]:
+def analyze_urls(email: EmailMessage, api_key: str | None = None) -> list[ThreatIndicator]:
     """
     Analyze URLs extracted from the email body.
-    Returns a list of ThreatIndicator objects.
+    Pass api_key to enable VirusTotal lookups.
     """
     indicators = []
 
@@ -61,14 +59,14 @@ def analyze_urls(email: EmailMessage) -> list[ThreatIndicator]:
                 severity=7,
                 evidence=url,
             ))
-            continue  # No need to run further checks on this URL
+            continue
 
         # --- Check 2: URL shortener ---
         if root_domain in URL_SHORTENERS:
             indicators.append(ThreatIndicator(
                 category="url",
                 name="url_shortener",
-                description=f"URL uses a shortener service that hides the real destination",
+                description="URL uses a shortener service that hides the real destination",
                 severity=5,
                 evidence=url,
             ))
@@ -97,11 +95,10 @@ def analyze_urls(email: EmailMessage) -> list[ThreatIndicator]:
                 ))
                 break
 
-        # --- Check 5: Lookalike domain (typosquatting) ---
+        # --- Check 5: Lookalike domain ---
         for brand in KNOWN_BRANDS:
             if brand in root_domain:
-                continue  # Legitimate match, skip
-            # Check for character substitutions: 0→o, 1→i/l, 3→e
+                continue
             normalized = root_domain.replace("0", "o").replace("1", "i").replace("3", "e")
             if brand in normalized:
                 indicators.append(ThreatIndicator(
@@ -112,5 +109,11 @@ def analyze_urls(email: EmailMessage) -> list[ThreatIndicator]:
                     evidence=url,
                 ))
                 break
+
+        # --- Check 6: VirusTotal (optional) ---
+        if api_key:
+            vt_indicator = virustotal.check_url(url, api_key)
+            if vt_indicator:
+                indicators.append(vt_indicator)
 
     return indicators
