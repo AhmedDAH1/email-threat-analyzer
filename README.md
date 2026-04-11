@@ -5,7 +5,22 @@
 ![Tests](https://github.com/AhmedDAH1/email-threat-analyzer/actions/workflows/ci.yml/badge.svg)
 ![Domain](https://img.shields.io/badge/Domain-Cybersecurity-red?style=flat-square)
 
-A Python-based phishing detection tool that parses raw `.eml` files and runs multi-layer analysis across headers, URLs, attachments, and email body content — scoring each email on a 0–100 threat scale with detailed indicator reporting. Optionally enriched with live threat intelligence via VirusTotal.
+A modular phishing detection engine that performs multi-layer email security analysis similar to real-world SOC tooling. Parses raw `.eml` files, scores each email on a 0–100 threat scale, and optionally enriches findings with live threat intelligence via VirusTotal.
+
+---
+
+## Why This Project
+
+Phishing remains one of the most common attack vectors in real-world environments.  
+This project simulates how security tools analyze suspicious emails by combining:
+
+- Header analysis
+- URL inspection
+- Attachment inspection
+- Content heuristics
+- Threat intelligence enrichment
+
+The goal is to replicate how real SOC tools classify malicious emails.
 
 ---
 
@@ -205,6 +220,19 @@ tests/test_parser.py                10 tests
 tests/test_scorer.py                 6 tests
 tests/test_url_analyzer.py           4 tests (+ 1 integration)
 ```
+
+---
+
+## Skills Demonstrated
+
+- Email protocol parsing (RFC 5322)
+- Threat detection heuristics
+- Security scoring systems
+- Modular Python architecture
+- REST API integration (VirusTotal)
+- CLI design
+- Unit testing (pytest)
+- CI/CD (GitHub Actions)
 
 ---
 
