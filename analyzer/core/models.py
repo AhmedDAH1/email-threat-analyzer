@@ -1,7 +1,6 @@
 from dataclasses import dataclass, field
 from typing import Optional
-from datetime import datetime
-
+from datetime import datetime, timezone
 
 @dataclass
 class EmailMessage:
@@ -37,5 +36,6 @@ class ScanResult:
     threat_score: int = 0                        # 0–100, computed by scoring.py
     threat_level: str = "CLEAN"                  # CLEAN / LOW / MEDIUM / HIGH / CRITICAL
     scanned_at: str = field(
-        default_factory=lambda: datetime.utcnow().isoformat()
+        default_factory=lambda: datetime.now(timezone.utc).isoformat()
+
     )
