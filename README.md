@@ -5,7 +5,7 @@
 ![Tests](https://github.com/AhmedDAH1/email-threat-analyzer/actions/workflows/ci.yml/badge.svg)
 ![Domain](https://img.shields.io/badge/Domain-Cybersecurity-red?style=flat-square)
 
-A Python-based phishing detection tool that parses raw `.eml` files and runs multi-layer analysis across headers, URLs, attachments, and email body content — scoring each email on a 0–100 threat scale with detailed indicator reporting.
+A Python-based phishing detection tool that parses raw `.eml` files and runs multi-layer analysis across headers, URLs, attachments, and email body content — scoring each email on a 0–100 threat scale with detailed indicator reporting. Optionally enriched with live threat intelligence via VirusTotal.
 
 ---
 
@@ -68,9 +68,10 @@ INDICATORS (7 found)
 | Module | What It Detects | Severity Range |
 |---|---|---|
 | Header analysis | Sender spoofing, display name tricks, reply-to mismatch | 6–8 |
-| URL analysis | Misleading subdomains, URL shorteners, IP-based URLs | 5–8 |
+| URL analysis | Misleading subdomains, URL shorteners, IP-based URLs, lookalike domains | 5–8 |
 | Attachment analysis | Dangerous extensions, double extension spoofing, content-type mismatch, suspicious archives | 4–9 |
 | Content analysis | Urgency language, credential harvesting requests, HTML link mismatch | 4–9 |
+| VirusTotal integration | URL and file hash lookups against 70+ AV engines (optional) | 4–10 |
 | Threat scoring | Weighted 0–100 score with category multipliers | — |
 | Reporters | Colored terminal output or JSON report | — |
 
@@ -99,6 +100,20 @@ Final score is capped at 100 and mapped to a threat level:
 
 ---
 
+## VirusTotal Integration
+
+Pass your API key via `--virustotal` to enrich the analysis with live threat intelligence:
+
+- **URL lookups** — each URL is checked against 70+ antivirus engines
+- **File hash lookups** — attachments are hashed (SHA256) and checked against VT's database
+- **Opt-in only** — the tool works fully without a key; VT is never required
+
+Get a free API key at https://virustotal.com — 4 lookups/minute on the free tier.
+
+> Never hardcode your API key in the source. Always pass it via the CLI flag or an environment variable.
+
+---
+
 ## Project Structure
 
 ```
@@ -114,7 +129,8 @@ email-threat-analyzer/
 │   ├── core/                       # Shared infrastructure
 │   │   ├── models.py               # EmailMessage, ThreatIndicator, ScanResult
 │   │   ├── parser.py               # .eml → EmailMessage
-│   │   └── scorer.py               # Weighted threat scoring engine
+│   │   ├── scorer.py               # Weighted threat scoring engine
+│   │   └── virustotal.py           # VirusTotal API client
 │   └── reporters/                  # Output formatters
 │       ├── terminal_reporter.py    # Colored CLI output
 │       └── json_reporter.py        # Machine-readable JSON
@@ -145,6 +161,9 @@ python3 main.py samples/phishing_test.eml --format json
 
 # Save JSON report to file
 python3 main.py samples/phishing_test.eml --format json --output report.json
+
+# With VirusTotal integration
+python3 main.py samples/phishing_test.eml --virustotal YOUR_API_KEY
 ```
 
 ---
@@ -153,11 +172,12 @@ python3 main.py samples/phishing_test.eml --format json --output report.json
 
 ```
 positional arguments:
-  eml_file          Path to the .eml file to analyze
+  eml_file              Path to the .eml file to analyze
 
 options:
-  --format          Output format: terminal | json (default: terminal)
-  --output FILE     Save JSON report to a file (use with --format json)
+  --format              Output format: terminal | json (default: terminal)
+  --output FILE         Save JSON report to a file (use with --format json)
+  --virustotal API_KEY  Enable VirusTotal URL and file hash lookups
 ```
 
 ---
@@ -179,11 +199,11 @@ make clean      # Remove __pycache__ files
 34 tests across 4 modules — all passing:
 
 ```
-tests/test_attachment_analyzer.py   5 tests
-tests/test_content_analyzer.py      8 tests
-tests/test_parser.py               10 tests
-tests/test_scorer.py                6 tests
-tests/test_url_analyzer.py          4 tests (+ 1 integration)
+tests/test_attachment_analyzer.py    5 tests
+tests/test_content_analyzer.py       8 tests
+tests/test_parser.py                10 tests
+tests/test_scorer.py                 6 tests
+tests/test_url_analyzer.py           4 tests (+ 1 integration)
 ```
 
 ---
@@ -192,6 +212,8 @@ tests/test_url_analyzer.py          4 tests (+ 1 integration)
 
 - **Language**: Python 3.11+
 - **Email parsing**: Python standard library `email` module
+- **Threat intelligence**: VirusTotal API v3
+- **HTTP client**: `requests`
 - **Architecture**: Modular — parsers, analyzers, scorer, and reporters fully decoupled
 - **CI**: GitHub Actions — 34 tests run automatically on every push
 
