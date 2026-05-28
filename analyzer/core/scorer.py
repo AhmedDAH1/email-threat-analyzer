@@ -26,24 +26,35 @@ def _compute_score(indicators: list[ThreatIndicator]) -> int:
     """
     Compute a 0–100 threat score from a list of indicators.
 
-    Formula per indicator:
-        contribution = severity * category_weight
-    
-    Then we scale the total into 0–100 using a soft cap.
+    Strategy:
+        - The single highest-severity indicator anchors the score
+          (a strong individual signal should not be diluted by absence
+           of others).
+        - Additional indicators add diminishing extra points
+          (so 5 weak indicators don't outweigh 1 critical one,
+           but multiple corroborating signals do raise confidence).
+
+    Each indicator contributes:
+        severity * 10 * category_weight   (severity 0–10 → ~0–14 points)
     """
     if not indicators:
         return 0
 
-    raw = 0.0
-    for indicator in indicators:
-        weight = CATEGORY_WEIGHTS.get(indicator.category, 1.0)
-        raw += indicator.severity * weight
+    weighted = [
+        i.severity * 10 * CATEGORY_WEIGHTS.get(i.category, 1.0)
+        for i in indicators
+    ]
+    weighted.sort(reverse=True)
 
-    # A single critical attachment indicator (severity 10 * weight 1.4) = 14 points raw.
-    # We treat 100 raw points as the ceiling → maps to score 100.
-    # This gives room for realistic multi-indicator emails without instant maxing out.
-    score = int((raw / 100) * 100)
-    return min(score, 100)
+    # Anchor: the strongest single signal carries full weight.
+    score = weighted[0]
+
+    # Each additional indicator contributes at decreasing weight.
+    # Second indicator at 50%, third at 25%, fourth at 12.5%, etc.
+    for i, w in enumerate(weighted[1:], start=1):
+        score += w * (0.5 ** i)
+
+    return min(int(score), 100)
 
 
 def _compute_level(score: int) -> str:

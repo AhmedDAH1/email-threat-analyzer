@@ -22,3 +22,7 @@ env/
 # IDE
 .vscode/
 .idea/
+
+# Phishing corpora — kept local for validation, too large for repo
+samples/*.mbox
+samples/nazario/
