@@ -197,6 +197,9 @@ python3 main.py samples/phishing_test.eml --format json --output report.json
 
 # With VirusTotal integration
 python3 main.py samples/phishing_test.eml --virustotal YOUR_API_KEY
+
+# Send MEDIUM-or-worse verdicts to SOAR-Lite as incidents
+SOAR_WEBHOOK_SECRET=... python3 main.py samples/phishing_test.eml --forward http://localhost:8000
 ```
 
 ### CLI Options
@@ -209,7 +212,28 @@ options:
   --format              Output format: terminal | json (default: terminal)
   --output FILE         Save JSON report to a file (use with --format json)
   --virustotal API_KEY  Enable VirusTotal URL and file-hash lookups
+  --forward URL         Send the verdict to SOAR-Lite (needs SOAR_WEBHOOK_SECRET)
+  --forward-min LEVEL   Only forward verdicts at or above LEVEL (default: MEDIUM)
 ```
+
+### Sending verdicts to SOAR-Lite
+
+A phishing verdict can become an incident in
+[SOAR-Lite](https://github.com/AhmedDAH1/soar-lite), where the URLs and
+attachment hashes are extracted as IOCs and enriched, playbooks escalate it
+and an analyst works the case:
+
+```bash
+# SOAR-Lite running with WEBHOOK_SECRET set; use the same value here
+export SOAR_WEBHOOK_SECRET=<SOAR-Lite's WEBHOOK_SECRET>
+python3 main.py suspicious.eml --forward http://localhost:8000
+```
+
+The verdict goes to SOAR-Lite's email gateway webhook, signed with HMAC-SHA256
+over a timestamp and the body, which SOAR-Lite verifies before creating the
+incident. Verdicts below `--forward-min` stay local. The subject line and
+sender are attacker-written, which is why SOAR-Lite escapes everything it
+displays.
 
 ---
 
@@ -236,8 +260,9 @@ email-threat-analyzer/
 │   │   └── virustotal.py           # VirusTotal API client
 │   └── reporters/                  # Output formatters
 │       ├── terminal_reporter.py    # Colored CLI output
-│       └── json_reporter.py        # Machine-readable JSON
-├── tests/                          # 34 unit tests across all modules
+│       ├── json_reporter.py        # Machine-readable JSON
+│       └── soar_forwarder.py       # Signed webhooks to SOAR-Lite
+├── tests/                          # 48 unit tests across all modules
 └── samples/                        # Sample .eml files (4 phishing + 1 legitimate control)
 ```
 
@@ -245,13 +270,14 @@ email-threat-analyzer/
 
 ## Test Suite
 
-34 tests across all modules — all passing:
+48 tests across all modules — all passing:
 
 ```
 tests/test_attachment_analyzer.py    5 tests
 tests/test_content_analyzer.py       8 tests
 tests/test_parser.py                10 tests
 tests/test_scorer.py                 6 tests
+tests/test_soar_forwarder.py        14 tests
 tests/test_url_analyzer.py           5 tests
 ```
 
@@ -274,7 +300,8 @@ make test    # or: pytest tests/
 | Web development | Flask app, in-memory analysis, security-guarded endpoints |
 | Containerization | Docker + gunicorn, non-root user |
 | Cloud deployment | Live on Render |
-| Unit testing | 34 pytest tests |
+| Integration | Signed webhooks to SOAR-Lite (`--forward`) |
+| Unit testing | 48 pytest tests |
 | CI/CD | GitHub Actions on every push |
 
 ---
@@ -288,7 +315,7 @@ make test    # or: pytest tests/
 - **Containerization**: Docker + docker-compose
 - **Deployment**: Render
 - **Architecture**: Modular — parsers, analyzers, scorer, and reporters fully decoupled
-- **CI**: GitHub Actions — 34 tests run automatically on every push
+- **CI**: GitHub Actions — 48 tests run automatically on every push
 
 ---
 

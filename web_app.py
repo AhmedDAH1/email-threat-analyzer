@@ -308,12 +308,12 @@ async function analyze() {
     });
     const data = await res.json();
     if (!res.ok) {
-      errBox.innerHTML = '<div class="err">' + (data.error || 'Analysis failed.') + '</div>';
+      errBox.innerHTML = '<div class="err">' + esc(data.error || 'Analysis failed.') + '</div>';
       return;
     }
     renderReport(data);
   } catch (e) {
-    errBox.innerHTML = '<div class="err">Network error: ' + e.message + '</div>';
+    errBox.innerHTML = '<div class="err">Network error: ' + esc(e.message) + '</div>';
   } finally {
     loading.classList.add('hidden');
     btn.disabled = false;

@@ -1,9 +1,11 @@
 # main.py
 
 import argparse
+import os
 import sys
 from analyzer.engine import analyze_file as run_analysis
 from analyzer.reporters import terminal_reporter, json_reporter
+from analyzer.reporters import soar_forwarder
 
 
 def main():
@@ -33,6 +35,21 @@ def main():
         metavar="API_KEY"
     )
 
+    parser.add_argument(
+        "--forward",
+        metavar="URL",
+        default=None,
+        help="Send the verdict to SOAR-Lite at URL (e.g. http://localhost:8000); "
+             "needs SOAR_WEBHOOK_SECRET set to SOAR-Lite's WEBHOOK_SECRET",
+    )
+    parser.add_argument(
+        "--forward-min",
+        metavar="LEVEL",
+        choices=soar_forwarder.LEVELS,
+        default="MEDIUM",
+        help="Only forward verdicts at or above this level (default: MEDIUM)",
+    )
+
     args = parser.parse_args()
 
     if args.virustotal:
@@ -55,6 +72,19 @@ def main():
             print(f"\n[+] Report saved to {args.output}")
     else:
         print(terminal_reporter.render(result))
+
+    if args.forward:
+        if not soar_forwarder.should_forward(result, args.forward_min):
+            print(f"[+] Not forwarded: {result.threat_level} is below --forward-min {args.forward_min}",
+                  file=sys.stderr)
+            return
+        try:
+            ok, message = soar_forwarder.forward(
+                result, args.forward, os.environ.get("SOAR_WEBHOOK_SECRET", ""))
+        except ValueError as e:
+            print(f"[ERROR] --forward: {e}", file=sys.stderr)
+            sys.exit(1)
+        print(("[+] " if ok else "[WARN] ") + message, file=sys.stderr)
 
 
 if __name__ == "__main__":
