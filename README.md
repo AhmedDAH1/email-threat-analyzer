@@ -101,6 +101,11 @@ docker compose up        # then open http://localhost:8000
 python3 web_app.py       # then open http://localhost:8000
 ```
 
+The same app is an API: `POST /api/analyze` with `{"raw": "<.eml content>"}`
+returns the score, the indicators, and `soar`, the verdict in the format
+`--forward` sends to [SOAR-Lite](https://github.com/AhmedDAH1/soar-lite).
+SOAR-Lite's "Analyze logs" page uses it to open incidents from uploaded emails.
+
 ---
 
 ## Features

@@ -22,6 +22,7 @@ import glob
 from flask import Flask, request, jsonify, render_template_string
 
 from analyzer.engine import analyze_raw
+from analyzer.reporters.soar_forwarder import verdict_payload
 
 app = Flask(__name__)
 
@@ -76,6 +77,9 @@ def result_to_dict(result) -> dict:
             }
             for ind in sorted(result.indicators, key=lambda i: i.severity, reverse=True)
         ],
+        # The same verdict --forward sends to SOAR-Lite, so SOAR-Lite can
+        # analyse an uploaded email and open an incident from the response.
+        "soar": verdict_payload(result),
     }
 
 

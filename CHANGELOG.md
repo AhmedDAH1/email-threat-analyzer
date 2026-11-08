@@ -3,6 +3,13 @@
 All notable changes to Email Threat Analyzer. The format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [1.3.0] - 2026-11-08
+
+### Added
+- The web API's `POST /api/analyze` response includes `soar`: the verdict in
+  the format `--forward` sends to SOAR-Lite, so SOAR-Lite's "Analyze logs"
+  page can open an incident from an uploaded email.
+
 ## [1.2.0] - 2026-11-08
 
 ### Added
